@@ -73,6 +73,9 @@ export default function TabTwoScreen() {
             No books yet, press the button or start scanning
           </ThemedText>
         )}
+        <ThemedText>
+          All Info is courtesy of the Google Books API Family, thanks papa G!
+        </ThemedText>
       </ScrollView>
     </ParallaxScrollView>
   );
