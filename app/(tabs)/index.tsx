@@ -1,161 +1,106 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
-  Image,
   StyleSheet,
+  Image,
   Platform,
-  View,
   Button,
-  TouchableOpacity,
-  Text,
-  Modal,
+  View,
+  ScrollView,
 } from "react-native";
 
-import { HelloWave } from "@/components/HelloWave";
+import { Collapsible } from "@/components/Collapsible";
+import { ExternalLink } from "@/components/ExternalLink";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import {
-  BarcodeScanningResult,
-  BarcodeType,
-  CameraView,
-  useCameraPermissions,
-} from "expo-camera";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function HomeScreen() {
-  const [facing, setFacing] = useState("back");
-  const [permission, requestPermission] = useCameraPermissions();
-  const [sureAdd, setSureAdd] = useState(false);
-  const [selectedBook, setSelectedBook] = useState(
-    undefined as BarcodeScanningResult | undefined
-  );
-  const [bookInfo, setBookInfo] = useState(undefined as any | undefined);
+export default function TabTwoScreen() {
+  const [bookList, setBookList] = useState([]);
+  const [gotBooks, setGotBooks] = useState(false);
 
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
-  }
+  useEffect(() => {
+    getBooks();
+  }, []);
 
-  if (!permission.granted) {
-    // Camera permissions are not granted yet.
-    return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: "center" }}>
-          We need your permission to show the camera
-        </Text>
-        <Button onPress={requestPermission} title="grant permission" />
-      </View>
-    );
-  }
-
-  async function addBookToLibrary() {
+  const getBooks = async () => {
     try {
-      if (await AsyncStorage.getItem("libraryBooks")) {
-        const books = JSON.parse(
-          (await AsyncStorage.getItem("libraryBooks")) || ""
-        );
-        books.push(bookInfo);
-        AsyncStorage.setItem("libraryBooks", JSON.stringify(books));
-      } else {
-        AsyncStorage.setItem("libraryBooks", JSON.stringify([bookInfo]));
+      const books = await AsyncStorage.getItem("libraryBooks");
+      setBookList(JSON.parse(books as string));
+      console.log(books);
+      if (books) {
+        setGotBooks(true);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
     }
-    setSureAdd(false);
-  }
+  };
 
-  function fetchBookInfo(data: BarcodeScanningResult) {
-    fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${data.data}`)
-      .then((response) => response.json())
-      .then((data) => {
-        setBookInfo(data);
-        console.log(data);
-      });
-  }
-
-  function toggleCameraFacing() {
-    setFacing((current) => (current === "back" ? "front" : "back"));
-  }
+  const resetBooks = async () => {
+    try {
+      await AsyncStorage.removeItem("libraryBooks");
+      setGotBooks(false);
+      setBookList([]);
+    } catch (error) {
+      console.error(error);
+    }
+  };
   return (
-    <View style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        barcodeScannerSettings={{
-          barcodeTypes: ["ean13"],
-        }}
-        onBarcodeScanned={(data) => {
-          setSureAdd(true);
-          setSelectedBook(data);
-          fetchBookInfo(data);
-          console.log(data);
-        }}
-      >
+      <ScrollView style={{ flex: 1, flexDirection: "column", marginTop: "10%"}}>
+        <ThemedView style={styles.buttonContainer}>
+          <Button title="Get Books" onPress={getBooks} />
+          <Button title="Reset Books" onPress={resetBooks} />
+        </ThemedView>
+        {gotBooks ? (
+          <View style={styles.buttonContainer}>
+            <ThemedText style={{ fontSize: 24 }}>Books:</ThemedText>
+            {bookList.map((book: any) => (
+              <Collapsible
+                key={book.items[0].volumeInfo.title}
+                title={book.items[0].volumeInfo.title}
+              >
+                {book.items[0].volumeInfo.authors.map((i: string | number) => {
+                  return <ThemedText>{book.items[0].volumeInfo.authors[i]}</ThemedText>
+                    })}
+                    <ThemedText>{book.items[0].volumeInfo.authors[0]}</ThemedText>
+                <ExternalLink href={book.items[0].volumeInfo.previewLink}>
+                  <ThemedText>
+                    {book.items[0].volumeInfo.previewLink}
+                  </ThemedText>
+                </ExternalLink>
+              </Collapsible>
+            ))}
+          </View>
+        ) : (
+          <ThemedText style={{ fontSize: 24 }}>
+            No books yet, press the button or start scanning
+          </ThemedText>
+        )}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <Text style={styles.text}>Flip Camera</Text>
-          </TouchableOpacity>
+          <ThemedText>
+            All Info is courtesy of the Google Books API Family, thanks papa G!
+          </ThemedText>
         </View>
-      </CameraView>
-      <Modal visible={sureAdd}>
-        <View>
-          {bookInfo ? (
-            <Text>Title: {bookInfo.items[0].volumeInfo.title}</Text>
-          ) : null}
-          <Text>Are you sure you want to add this book?</Text>
-          <Button title="Yes" onPress={() => addBookToLibrary()} />
-          <Button
-            title="No"
-            onPress={() => {
-              setSureAdd(false);
-              setSelectedBook(undefined);
-              setBookInfo(undefined);
-            }}
-          />
-        </View>
-      </Modal>
-    </View>
+        
+      </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  headerImage: {
+    color: "#808080",
+    bottom: -90,
+    left: -35,
     position: "absolute",
   },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  camera: {
-    flex: 1,
+  titleContainer: {
+    flexDirection: "row",
+    gap: 8,
   },
   buttonContainer: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    margin: 64,
-  },
-  button: {
-    flex: 1,
-    alignSelf: "flex-end",
-    alignItems: "center",
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-  },
+    margin: 50,
+
+  }
 });
