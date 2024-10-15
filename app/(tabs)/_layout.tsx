@@ -1,9 +1,9 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs } from "expo-router";
+import React from "react";
 
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { TabBarIcon } from "@/components/navigation/TabBarIcon";
+import { Colors } from "@/constants/Colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -11,28 +11,55 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
-      }}>
-        <Tabs.Screen
+      }}
+    >
+      <Tabs.Screen
         name="index"
         options={{
-          title: 'Library',
+          title: "Library",
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'library' : 'library-outline'} color={color} />
+            <TabBarIcon
+              name={focused ? "library" : "library-outline"}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="scan"
         options={{
-          title: 'Scan and Add',
+          title: "Scan Books",
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'scan' : 'scan-outline'} color={color} />
+            <TabBarIcon
+              name={focused ? "scan" : "scan-outline"}
+              color={color}
+            />
           ),
         }}
       />
-      
+      <Tabs.Screen
+        name="scanDvd"
+        options={{
+          title: "Scan DVDs",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? "scan" : "scan-outline"}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="add"
+        options={{
+          title: "Add Manually",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? "add" : "add-outline"} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

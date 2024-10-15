@@ -35,7 +35,7 @@ export default function ScanScreen() {
   const [selectedBook, setSelectedBook] = useState(
     undefined as BarcodeScanningResult | undefined
   );
-  const [bookInfo, setBookInfo] = useState(undefined as any | undefined);
+  const [dvdInfo, setDvdInfo] = useState(undefined as any | undefined);
   const [barcodeFound, setBarcodeFound] = useState(false);
   const [debounced, setDebounced] = useState(false);
 
@@ -56,27 +56,23 @@ export default function ScanScreen() {
     );
   }
 
-  async function addBookToLibrary() {
+  async function addDvdToLibrary() {
     try {
-      if (await AsyncStorage.getItem("libraryBooks")) {
-        const books = JSON.parse(
-          (await AsyncStorage.getItem("libraryBooks")) || ""
+      if (await AsyncStorage.getItem("libraryDvds")) {
+        const dvds = JSON.parse(
+          (await AsyncStorage.getItem("libraryDvds")) || ""
         );
         if (
-          books.find(
-            (book: any) =>
-              book.items[0].volumeInfo.title ===
-              bookInfo.items[0].volumeInfo.title
-          )
+          dvds.find((dvd: any) => dvd.items[0].title === dvdInfo.items[0].title)
         ) {
           setSureAdd(false);
           setAlreadyAdded(true);
           return;
         }
-        books.push(bookInfo);
-        AsyncStorage.setItem("libraryBooks", JSON.stringify(books));
+        dvds.push(dvdInfo);
+        AsyncStorage.setItem("libraryDvds", JSON.stringify(dvds));
       } else {
-        AsyncStorage.setItem("libraryBooks", JSON.stringify([bookInfo]));
+        AsyncStorage.setItem("libraryDvds", JSON.stringify([dvdInfo]));
       }
     } catch (e) {
       console.error(e);
@@ -87,16 +83,12 @@ export default function ScanScreen() {
 
   async function checkInLibrary() {
     try {
-      if (await AsyncStorage.getItem("libraryBooks")) {
-        const books = JSON.parse(
-          (await AsyncStorage.getItem("libraryBooks")) || ""
+      if (await AsyncStorage.getItem("libraryDvds")) {
+        const dvds = JSON.parse(
+          (await AsyncStorage.getItem("libraryDvds")) || ""
         );
         if (
-          books.find(
-            (book: any) =>
-              book.items[0].volumeInfo.title ===
-              bookInfo.items[0].volumeInfo.title
-          )
+          dvds.find((dvd: any) => dvd.items[0].title === dvdInfo.items[0].title)
         ) {
           return true;
         } else {
@@ -111,18 +103,16 @@ export default function ScanScreen() {
     }
   }
 
-  function fetchBookInfo(data: BarcodeScanningResult) {
+  function fetchDvdInfo(data: BarcodeScanningResult) {
     try {
-      fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=isbn:${data.data}&key=${process.env.EXPO_PUBLIC_API_KEY}`
-      )
+      fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${data.data}`)
         .then((response) => response.json())
         .then((data) => {
-          if (data.totalItems === 0) {
+          if (data.total === 0) {
             setErrorFetching(true);
             return;
           }
-          setBookInfo(data);
+          setDvdInfo(data);
           console.log(data);
         })
         .catch((e) => {
@@ -143,7 +133,7 @@ export default function ScanScreen() {
       // Check debounce state
       setBarcodeFound(true);
       setSelectedBook(data);
-      fetchBookInfo(data as BarcodeScanningResult);
+      fetchDvdInfo(data as BarcodeScanningResult);
       setSureAdd(true);
       console.log("Scanned data:", data);
 
@@ -192,7 +182,7 @@ export default function ScanScreen() {
                 } as BarcodeScanningResult;
                 setSureAdd(true);
                 setSelectedBook(data);
-                fetchBookInfo(data);
+                fetchDvdInfo(data);
                 console.log("Data", data);
               }}
             >
@@ -204,15 +194,13 @@ export default function ScanScreen() {
 
       <Modal visible={sureAdd}>
         <View>
-          {bookInfo ? (
-            <Text>Title: {bookInfo.items[0].volumeInfo.title}</Text>
-          ) : null}
-          <Text>Are you sure you want to add this book?</Text>
+          {dvdInfo ? <Text>Title: {dvdInfo.items[0].title}</Text> : null}
+          <Text>Are you sure you want to add this Dvd?</Text>
           <Button
             title="Yes"
             onPress={async () => {
               console.log(checkInLibrary());
-              addBookToLibrary();
+              addDvdToLibrary();
             }}
           />
           <Button
@@ -220,7 +208,7 @@ export default function ScanScreen() {
             onPress={() => {
               setSureAdd(false);
               setSelectedBook(undefined);
-              setBookInfo(undefined);
+              setDvdInfo(undefined);
               setBarcodeFound(false);
             }}
           />
@@ -234,7 +222,7 @@ export default function ScanScreen() {
             onPress={() => {
               setAlreadyAdded(false);
               setSelectedBook(undefined);
-              setBookInfo(undefined);
+              setDvdInfo(undefined);
             }}
           />
         </View>
@@ -248,7 +236,8 @@ export default function ScanScreen() {
               setErrorFetching(false);
               setSureAdd(false);
               setSelectedBook(undefined);
-              setBookInfo(undefined);
+              setDvdInfo(undefined);
+              setBarcodeFound(false);
             }}
           />
         </View>

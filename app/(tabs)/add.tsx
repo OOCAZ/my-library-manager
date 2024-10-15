@@ -20,12 +20,12 @@ import {
   CameraView,
   useCameraPermissions,
 } from "expo-camera";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import React from "react";
+import { useLocalSearchParams } from "expo-router";
+import { Card } from "react-native-paper";
 
-export default function ScanScreen() {
+export default function AddScreen() {
   const [facing, setFacing] = useState("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [sureAdd, setSureAdd] = useState(false);
@@ -36,25 +36,22 @@ export default function ScanScreen() {
     undefined as BarcodeScanningResult | undefined
   );
   const [bookInfo, setBookInfo] = useState(undefined as any | undefined);
-  const [barcodeFound, setBarcodeFound] = useState(false);
-  const [debounced, setDebounced] = useState(false);
 
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
-  }
-
-  if (!permission.granted) {
-    // Camera permissions are not granted yet.
-    return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: "center" }}>
-          We need your permission to show the camera
-        </Text>
-        <Button onPress={requestPermission} title="grant permission" />
-      </View>
-    );
-  }
+  const setBookInfoFunc = () => {
+    console.log("local data: ", local.isbn);
+    if (local.isbn) {
+      /*setBookInfo(
+        JSON.parse(Array.isArray(local.isbn) ? local.isbn[0] : local.isbn) ||
+          null
+      );*/
+      console.log(
+        "local data: ",
+        JSON.parse(Array.isArray(local.isbn) ? local.isbn[0] : local.isbn) ||
+          null
+      );
+    }
+  };
+  const local = useLocalSearchParams();
 
   async function addBookToLibrary() {
     try {
@@ -82,7 +79,6 @@ export default function ScanScreen() {
       console.error(e);
     }
     setSureAdd(false);
-    setBarcodeFound(false);
   }
 
   async function checkInLibrary() {
@@ -118,11 +114,12 @@ export default function ScanScreen() {
       )
         .then((response) => response.json())
         .then((data) => {
+          console.log("attempt to call data", data);
           if (data.totalItems === 0) {
             setErrorFetching(true);
             return;
           }
-          setBookInfo(data);
+          if (data.items[0].error) setBookInfo(data);
           console.log(data);
         })
         .catch((e) => {
@@ -135,73 +132,42 @@ export default function ScanScreen() {
     }
   }
 
-  // Handle barcode scanned with debounce
-  const handleBarCodeScanned = (
-    data: React.SetStateAction<BarcodeScanningResult | undefined>
-  ) => {
-    if (!debounced) {
-      // Check debounce state
-      setBarcodeFound(true);
-      setSelectedBook(data);
-      fetchBookInfo(data as BarcodeScanningResult);
-      setSureAdd(true);
-      console.log("Scanned data:", data);
+  useEffect(() => {
+    setBookInfoFunc();
+  }, []);
 
-      // Start debounce timer to prevent multiple scans
-      setDebounced(true);
-      setTimeout(() => {
-        setDebounced(false);
-      }, 2000); // 2-second delay
-    }
-  };
-
-  function toggleCameraFacing() {
-    setFacing((current) => (current === "back" ? "front" : "back"));
-  }
   return (
     <View style={styles.container}>
-      {barcodeFound ? (
-        <></>
-      ) : (
-        <CameraView
-          style={styles.camera}
-          barcodeScannerSettings={{
-            barcodeTypes: ["ean13"],
-          }}
-          onBarcodeScanned={(data: BarcodeScanningResult) => {
-            if (data) {
-              handleBarCodeScanned(data);
-            }
+      <View style={styles.buttonContainer}>
+        {selectedBook === null ? (
+          <Text style={styles.text}>No book selected</Text>
+        ) : (
+          <Text style={styles.text}>{selectedBook?.data}</Text>
+        )}
+        <Card>
+          <Card.Title title="ISBN" subtitle={selectedBook?.raw} />
+        </Card>
+        <TextInput
+          style={{ color: "white", marginLeft: 20, marginRight: 20 }}
+          value={isbnEntry}
+          placeholderTextColor="white"
+          placeholder="Or just type an isbn here..."
+          onChangeText={setIsbnEntry}
+        />
+        <TouchableOpacity
+          onPress={() => {
+            let data = {
+              data: isbnEntry,
+            } as BarcodeScanningResult;
+            setSureAdd(true);
+            setSelectedBook(data);
+            fetchBookInfo(data);
+            console.log(data);
           }}
         >
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={toggleCameraFacing}>
-              <Text style={styles.text}>Flip Camera</Text>
-            </TouchableOpacity>
-            <TextInput
-              style={{ color: "white", marginLeft: 20, marginRight: 20 }}
-              value={isbnEntry}
-              placeholderTextColor="white"
-              placeholder="Or just type an isbn here..."
-              onChangeText={setIsbnEntry}
-            />
-            <TouchableOpacity
-              onPress={() => {
-                let data = {
-                  data: isbnEntry,
-                } as BarcodeScanningResult;
-                setSureAdd(true);
-                setSelectedBook(data);
-                fetchBookInfo(data);
-                console.log("Data", data);
-              }}
-            >
-              <Text style={styles.text}>Submit ISBN</Text>
-            </TouchableOpacity>
-          </View>
-        </CameraView>
-      )}
-
+          <Text style={styles.text}>Submit ISBN</Text>
+        </TouchableOpacity>
+      </View>
       <Modal visible={sureAdd}>
         <View>
           {bookInfo ? (
@@ -221,7 +187,6 @@ export default function ScanScreen() {
               setSureAdd(false);
               setSelectedBook(undefined);
               setBookInfo(undefined);
-              setBarcodeFound(false);
             }}
           />
         </View>
